@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>J.A.R.V.I.S. · Domus</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--c:#18b8ff;--c2:#7fdcff;--teal:#2de0b8;--dim:#6f9fb0;--t:#dff3fb;--amber:#ffb04a}
+*{box-sizing:border-box}
+html{font-size:clamp(11px,.78vw,30px)}
+html,body{height:100%;margin:0}
+body{overflow:hidden;color:var(--t);font-family:'Rajdhani',system-ui,sans-serif;font-size:1rem;
+  background:radial-gradient(ellipse 80% 90% at 50% 50%,#14181b 0,#0a0d0f 55%,#050607 100%)}
+#hud{position:fixed;inset:0;cursor:pointer}
+.ui{position:fixed;inset:0;pointer-events:none}
+.ui>*{pointer-events:auto}
+.ui>*:not(.callout){display:none}
+small{color:var(--dim)}
+.dot{display:inline-block;width:.55rem;height:.55rem;border-radius:50%;background:#555;margin-right:.35rem}
+.dot.on{background:#3dffb0;box-shadow:0 0 .5rem #3dffb0}
+.dot.off{background:#ff6b6b;box-shadow:0 0 .5rem #ff6b6b}
+
+.topbar{position:absolute;top:0;left:0;right:0;height:5.2%;display:flex;align-items:center;gap:2.4rem;padding:0 3%;
+  border-bottom:1px solid rgba(24,184,255,.22);font-size:.85rem;color:var(--dim)}
+.topbar b{color:var(--t);font-weight:600;margin-right:.45rem}
+.topbar .sp{margin-left:auto}
+#clock{font-family:'Share Tech Mono',monospace;color:var(--c2);font-size:1rem}
+#date{text-transform:capitalize}
+.brand{font-weight:700;letter-spacing:.32em;color:var(--c2);text-shadow:0 0 .7rem var(--c)}
+
+.tools{position:absolute;left:3%;top:10%;display:flex;gap:.6rem}
+.icon{width:2.3rem;height:2.3rem;padding:0;display:grid;place-items:center}
+.icon svg{width:1.3rem;height:1.3rem;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.mini{position:absolute;left:3%;top:19%;width:15%;font-size:.8rem;color:var(--dim)}
+.mini h2,.box h2,.ringinfo h2{margin:0 0 .35rem;font-size:.78rem;font-weight:600;color:var(--c2);letter-spacing:.1em;display:flex;align-items:center;gap:.4rem}
+.cmd{padding:.12rem 0;color:var(--t)}
+.ringinfo{position:absolute;left:12%;top:44%;width:14%;font-size:.8rem;border-left:1px solid rgba(24,184,255,.45);padding-left:.7rem}
+.ringinfo div{display:flex;justify-content:space-between;padding:.12rem 0}
+.ringinfo span:first-child{color:var(--dim)}
+
+.weather{position:absolute;left:73.5%;top:25%;width:11%}
+#wTemp{font-size:2.9rem;font-weight:600;line-height:1;color:#fff}
+#wDesc{font-size:1.05rem;margin:.2rem 0 .8rem}
+.weather div{font-size:.8rem;color:var(--dim);padding:.12rem 0;border-bottom:1px solid rgba(24,184,255,.14)}
+
+.rcol{position:absolute;right:2%;top:10%;width:14%;bottom:13%;display:flex;flex-direction:column;gap:.8rem;min-height:0}
+.box{border:1px solid rgba(24,184,255,.38);padding:.55rem .7rem;font-size:.8rem;background:rgba(4,20,28,.4)}
+.box svg{width:1rem;height:1rem;fill:none;stroke:var(--c2);stroke-width:1.6}
+#lastEsp{font-family:'Share Tech Mono',monospace;color:var(--c2);word-break:break-word}
+.logbox{flex:1;min-height:0;display:flex;flex-direction:column}
+#log{display:flex;flex-direction:column;gap:.45rem;overflow:auto;min-height:0;flex:1}
+.msg{line-height:1.2}.msg b{margin-right:.35rem}
+.msg.tu b{color:var(--dim)}.msg.jv b{color:var(--c)}.msg.er b{color:#ff8a8a}
+#net{width:100%;height:3.2rem;display:block}
+
+.bl{position:absolute;left:3%;bottom:3%;font-size:.8rem;color:var(--dim);line-height:1.65}
+.bl b{display:inline-block;width:4.5rem;font-weight:500}.bl span{color:var(--t)}
+.np{position:absolute;right:2%;bottom:3%;width:14%;display:flex;gap:.7rem;align-items:center}
+.np svg{width:2.4rem;height:2.4rem;flex:none;fill:var(--t)}
+.np small{display:block;font-size:.72rem;letter-spacing:.1em}
+#nowTxt{font-size:.82rem;line-height:1.15;max-height:2.4em;overflow:hidden}
+.cmdline{position:absolute;left:50%;transform:translateX(-50%);bottom:1.2%;width:42%;text-align:center}
+#status{font-weight:700;letter-spacing:.2em;color:var(--c2);text-shadow:0 0 .6rem var(--c);font-size:.95rem}
+#heard{font-family:'Share Tech Mono',monospace;color:var(--dim);font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+button{font:inherit;font-weight:600;letter-spacing:.08em;color:var(--c2);background:rgba(4,20,28,.6);border:1px solid var(--c);padding:.5rem 1rem;cursor:pointer}
+button:hover{background:rgba(24,184,255,.18)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+#start{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);font-size:1.4rem;padding:1rem 2.2rem;z-index:5;background:rgba(1,8,12,.9);box-shadow:0 0 2rem rgba(24,184,255,.5)}
+body:not([data-state="off"]) #start{display:none}
+
+dialog{width:min(40rem,92vw);max-height:92vh;overflow:auto;color:var(--t);background:#071a24;border:1px solid var(--c);padding:1.3rem;font-size:1rem}
+dialog::backdrop{background:rgba(0,0,0,.65)}
+dialog h3{margin:0 0 .8rem;color:var(--c2);letter-spacing:.14em}
+label{display:block;margin:.7rem 0 .25rem;color:var(--dim)}
+input,textarea{width:100%;background:#030d14;color:var(--t);border:1px solid rgba(24,184,255,.38);padding:.5rem;font-family:'Share Tech Mono',monospace;font-size:.9rem}
+textarea{height:11rem;resize:vertical}
+.actions{display:flex;gap:.6rem;margin-top:1rem;flex-wrap:wrap}
+.hint{font-size:.9rem;color:var(--dim);margin:.3rem 0 0}
+
+.callout{position:absolute;width:min(19rem,30vw);padding:.7rem .9rem;background:rgba(3,16,22,.94);border:1px solid rgba(24,184,255,.6);
+  opacity:0;transition:opacity .35s;pointer-events:none;z-index:4;box-shadow:0 0 1.2rem rgba(24,184,255,.25);
+  clip-path:polygon(0 0,calc(100% - .8rem) 0,100% .8rem,100% 100%,.8rem 100%,0 calc(100% - .8rem))}
+.callout.show{opacity:1}
+.callout h4{margin:0 0 .4rem;font-size:.85rem;letter-spacing:.16em;color:var(--c2);font-weight:700}
+.callout .l{font-size:.95rem;line-height:1.25;padding:.12rem 0;opacity:0}
+.callout.show .l{animation:ln .4s forwards}
+@keyframes ln{from{opacity:0;transform:translateX(-.4rem)}to{opacity:1;transform:none}}
+.mini,.ringinfo,.weather{transition:opacity .4s}
+body.has-callouts .mini,body.has-callouts .ringinfo,body.has-callouts .weather{opacity:.12}
+@media (max-width:1000px){.rcol,.weather,.mini,.ringinfo,.bl,.np{display:none}.cmdline{width:80%}}
+</style>
+</head>
+<body data-state="off">
+<canvas id="hud" aria-label="Núcleo de JARVIS. Tocá para hablarle"></canvas>
+
+<div class="ui">
+  <div class="topbar">
+    <span><i class="dot" id="espDot"></i><b>Domus</b><small id="espTxt">sin IP</small></span>
+    <span><b>Voz</b><small id="sVoz">—</small></span>
+    <span><b>Cerebro</b><small id="sIA">—</small></span>
+    <span class="sp"><span id="date"></span></span>
+    <span id="clock">--:--:--</span>
+    <span class="brand">J.A.R.V.I.S.</span>
+  </div>
+
+  <div class="tools">
+    <button class="icon" id="btnCfg" title="Ajustes" aria-label="Ajustes"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    <button class="icon" id="btnFull" title="Pantalla completa (F)" aria-label="Pantalla completa"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  </div>
+  <div class="mini"><h2>ÓRDENES</h2><div id="cmdList"></div></div>
+
+  <div class="ringinfo">
+    <h2>SISTEMA</h2>
+    <div><span>Asistente</span><span id="sAsis">fuera de línea</span></div>
+    <div><span>Micrófono</span><span id="sMic">apagado</span></div>
+  </div>
+
+  <div class="weather">
+    <div id="wTemp" style="border:0;color:#fff;font-size:2.9rem">--°</div>
+    <div id="wDesc" style="border:0;color:var(--t);font-size:1.05rem">Clima</div>
+    <div id="wFeel">Sensación —</div>
+    <div id="wWind">Viento —</div>
+    <div id="wHum">Humedad —</div>
+    <div id="wMM">Máx / Mín —</div>
+  </div>
+
+  <aside class="rcol">
+    <div class="box"><h2><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>DOMUS</h2><div id="lastEsp">—</div></div>
+    <div class="box logbox"><h2><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 7l9 6 9-6"/></svg>MENSAJES</h2><div id="log"></div></div>
+    <div class="box"><h2><svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 4 5-8 4 5"/></svg>RED DOMUS</h2><canvas id="net"></canvas></div>
+  </aside>
+
+  <div class="bl">
+    <div><b>Red</b><span id="bNet">—</span></div>
+    <div><b>Fuente</b><span id="bSrc">—</span></div>
+    <div><b>Batería</b><span id="bBat">—</span></div>
+  </div>
+
+  <div class="np">
+    <svg viewBox="0 0 24 24"><path d="M9 3v12.2A3.5 3.5 0 1 0 11 18.4V8h8V3z"/></svg>
+    <div><small>REPRODUCIENDO</small><div id="nowTxt">—</div></div>
+  </div>
+
+  <div class="cmdline"><div id="status">SIN ACTIVAR</div><div id="heard">Decí “Jarvis” y tu orden, o tocá el núcleo.</div></div>
+</div>
+
+<button id="start">ACTIVAR A JARVIS</button>
+
+<dialog id="dlg">
+  <h3>AJUSTES</h3>
+  <label for="fNombre">Cómo te llama</label>
+  <input id="fNombre">
+  <input id="fAiKey" type="password" value="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" autocomplete="off">
+
+  <input id="fAiKey" type="password" autocomplete="off">
+  <p class="hint">Se crea en console.anthropic.com. Sin esta clave Jarvis NO es una IA: solo entiende las órdenes de la lista.</p>
+  <input id="fAiModel" value="claude-3-5-sonnet-latest">
+
+
+  <label for="fKey">Elevenlabs API key</label>
+  <input id="fKey" type="password" value="sk_7e265..." autocomplete="off">
+  <label for="fVoice">Elevenlabs Voice ID</label>
+  <input id="fVoice" value="Charlie">
+  
+  <input id="fModel" value="eleven_flash_v2">
+  <label for="fStab">Estabilidad de la voz (0 a 1)</label>
+  <input id="fStab" type="number" min="0" max="1" step="0.05">
+  <label for="fSpeed">Velocidad (0.7 a 1.2)</label>
+  <input id="fSpeed" type="number" min="0.7" max="1.2" step="0.05">
+  <label for="fEsp">IP del ESP32 de Domus</label>
+  <input id="fEsp" placeholder="192.168.1.50">
+  <label for="fCmds">Acciones de Domus (JSON)</label>
+  <textarea id="fCmds" spellcheck="false"></textarea>
+  <p class="hint">“nombre” y “descripcion”: lo que la IA entiende de cada acción. “ruta”: la dirección que se llama en el ESP32. “respuesta” y “frases” se usan solo en modo simple. Las claves se guardan solo en este navegador; no compartas este archivo con ellas cargadas.</p>
+  <div class="actions">
+    <button id="bSave">GUARDAR</button>
+    <button id="bVoice">PROBAR VOZ</button>
+    <button id="bEsp">PROBAR ESP32</button>
+    <button id="bClose">CERRAR</button>
+  </div>
+</dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+const DEFAULT_CMDS = [
+  { nombre: "luz_encender", descripcion: "Enciende la luz", frases: ["enciende la luz", "prende la luz", "luz encendida"], ruta: "/luz/on", respuesta: "Luz encendida, {nombre}." },
+  { nombre: "luz_apagar", descripcion: "Apaga la luz", frases: ["apaga la luz", "luz apagada"], ruta: "/luz/off", respuesta: "Luz apagada." },
+  { nombre: "estado_casa", descripcion: "Consulta el estado de la casa (temperatura y sensores)", frases: ["estado de la casa", "como esta la casa", "temperatura"], ruta: "/estado", respuesta: "Esto es lo que reporta Domus: {r}" }
+];
+const DEFAULTS = {
+  nombre: "Mauri", key: "", voice: "", model: "eleven_flash_v2_5", esp: "", lang: "es-PY",
+  cmds: DEFAULT_CMDS, stab: 0.6, speed: 1.0, aiKey: "", aiModel: "claude-haiku-5-5", loc: null, modo: "wake"
+};
+let cfg = { ...DEFAULTS };
+try { Object.assign(cfg, JSON.parse(localStorage.getItem("jarvis_cfg") || "{}")); } catch (e) {}
+if (cfg.model === "eleven_multilingual_v2") cfg.model = "eleven_flash_v2_5";   // modelo más rápido
+const save = () => { try { localStorage.setItem("jarvis_cfg", JSON.stringify(cfg)); } catch (e) {} };
+
+/* ---------- utilidades ---------- */
+const norm = s => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  .replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+const WAKE = /\b(jarvis|yarvis|jarbis|harvis|yarbis|jarvi|jarvit)\b/;
+const STATUS = { off: "SIN ACTIVAR", idle: "EN ESPERA", listening: "ESCUCHANDO", thinking: "PROCESANDO", speaking: "HABLANDO" };
+let micMuted = false, voiceMuted = false, aiOff = false, active = false, speaking = false, forceNext = false, awakeUntil = 0, state = "off", aiBusy = false, espOnline = false, ignoreUntil = 0;
+
+function setState(s) {
+  state = s; document.body.dataset.state = s; $("#status").textContent = STATUS[s];
+  $("#sAsis").textContent = s === "off" ? "fuera de línea" : "en línea";
+  $("#sMic").textContent = active ? "activo" : "apagado";
+}
+function log(who, text) {
+  const d = document.createElement("div");
+  d.className = "msg " + (who === "tú" ? "tu" : who === "error" ? "er" : "jv");
+  const b = document.createElement("b"); b.textContent = who === "jarvis" ? "JARVIS" : who === "error" ? "ERROR" : cfg.nombre.toUpperCase();
+  d.append(b, document.createTextNode(text));
+  $("#log").append(d); $("#log").scrollTop = 1e9;
+}
+function tickClock() {
+  const n = new Date();
+  $("#clock").textContent = n.toLocaleTimeString("es-PY", { hour12: false });
+  $("#date").textContent = n.toLocaleDateString("es-PY", { weekday: "long", day: "numeric", month: "long" });
+}
+setInterval(tickClock, 1000); tickClock();
+function renderCmds() {
+  const el = $("#cmdList"); el.textContent = "";
+  (cfg.cmds || []).forEach(c => {
+    const d = document.createElement("div"); d.className = "cmd";
+    d.textContent = "› " + (c.descripcion || (c.frases && c.frases[0]) || c.nombre || ""); el.append(d);
+  });
+}
+function refreshStatus() {
+  $("#sVoz").textContent = cfg.key && cfg.voice ? "ElevenLabs" : "navegador";
+  $("#sIA").textContent = cfg.aiKey ? "IA Claude" : "SIN IA (comandos)";
+}
+
+/* ---------- voz: ElevenLabs con cola y caché (respuesta rápida) ---------- */
+let ac, analyser, meterId, amp = 0, freq = null, meterOn = false;
+function ensureAudio() {
+  ac ||= new (window.AudioContext || window.webkitAudioContext)();
+  if (!analyser) { analyser = ac.createAnalyser(); analyser.fftSize = 256; analyser.connect(ac.destination); }
+}
+function startMeter() {
+  const td = new Uint8Array(analyser.fftSize); freq = new Uint8Array(analyser.frequencyBinCount); meterOn = true;
+  const tick = () => {
+    analyser.getByteTimeDomainData(td); analyser.getByteFrequencyData(freq);
+    let sum = 0; for (const v of td) { const x = (v - 128) / 128; sum += x * x; }
+    amp = Math.min(1, Math.sqrt(sum / td.length) * 3.2);
+    meterId = requestAnimationFrame(tick);
+  };
+  tick();
+}
+function stopMeter() { cancelAnimationFrame(meterId); meterOn = false; amp = 0; }
+
+const audioCache = new Map();
+function fetchAudio(text) {
+  const key = cfg.voice + "|" + cfg.model + "|" + text;
+  if (audioCache.has(key)) return audioCache.get(key);
+  const p = (async () => {
+    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(cfg.voice)}?output_format=mp3_44100_128`, {
+      method: "POST",
+      headers: { "xi-api-key": cfg.key, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text, model_id: cfg.model || "eleven_flash_v2_5",
+        voice_settings: { stability: +cfg.stab, similarity_boost: 0.8, speed: +cfg.speed }
+      })
+    });
+    if (!r.ok) throw new Error("ElevenLabs respondió " + r.status);
+    ensureAudio();
+    return await ac.decodeAudioData(await r.arrayBuffer());
+  })();
+  if (text.length < 70) { audioCache.set(key, p); p.catch(() => audioCache.delete(key)); }
+  return p;
+}
+async function playBuffer(buf) {
+  ensureAudio(); if (ac.state === "suspended") await ac.resume();
+  const src = ac.createBufferSource(); src.buffer = buf; src.connect(analyser);
+  await new Promise(res => { src.onended = res; startMeter(); src.start(); });
+  stopMeter();
+}
+function speakBrowser(text) {
+  return new Promise(res => {
+    const u = new SpeechSynthesisUtterance(text); u.lang = "es-ES";
+    const es = speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith("es"));
+    const male = /jorge|diego|pablo|juan|carlos|enrique|miguel|male|masculin/i;
+    const v = es.find(v => male.test(v.name)) || es[0]; if (v) u.voice = v;
+    u.pitch = 0.5; u.rate = 0.95;
+    const iv = setInterval(() => { amp = Math.random() * .8; }, 90);
+    u.onend = u.onerror = () => { clearInterval(iv); amp = 0; res(); };
+    speechSynthesis.speak(u);
+  });
+}
+let sQ = [], sRun = null, errShown = false;
+function enqueue(text) {
+  text = text.replaceAll("{nombre}", cfg.nombre).replace(/[*_#`]/g, "").trim(); if (!text) return;
+  log("jarvis", text); $("#nowTxt").textContent = text;
+  const p = (cfg.key && cfg.voice) ? fetchAudio(text).catch(e => {
+    if (!errShown) { log("error", e.message + ". Uso la voz del navegador."); errShown = true; } return null; }) : null;
+  sQ.push({ text, p });
+  if (!sRun) sRun = runQueue();
+}
+async function runQueue() {
+  speaking = true; heard = ""; clearTimeout(fireTimer); setState("speaking");
+  try {
+    while (sQ.length) {
+      const it = sQ.shift(); if (voiceMuted) continue; const buf = it.p ? await it.p : null;
+      if (buf) await playBuffer(buf); else await speakBrowser(it.text);
+    }
+  } finally {
+    speaking = false; sRun = null; ignoreUntil = Date.now() + 700;
+    setState(aiBusy ? "thinking" : active ? (forceNext || Date.now() < awakeUntil ? "listening" : "idle") : "off");
+  }
+}
+const drain = async () => { while (sRun) await sRun; };
+const say = async t => { enqueue(t); await drain(); };
+
+/* ---------- ESP32 ---------- */
+const pings = [];
+const espBase = () => {
+  let b = cfg.esp.trim(); if (!b) return "";
+  if (!/^https?:\/\//.test(b)) b = "http://" + b;
+  return b.replace(/\/$/, "");
+};
+async function withTimeout(url, opts, ms = 4000) {
+  const c = new AbortController(); const t = setTimeout(() => c.abort(), ms);
+  try { return await fetch(url, { ...opts, signal: c.signal }); } finally { clearTimeout(t); }
+}
+async function callEsp(ruta, metodo = "GET") {
+  const base = espBase(); if (!base) throw new Error("Falta la IP del ESP32 en Ajustes");
+  const url = base + ruta;
+  try {
+    const r = await withTimeout(url, { method: metodo });
+    return (await r.text()).trim().slice(0, 200);
+  } catch (e) {
+    await withTimeout(url, { method: metodo, mode: "no-cors" });
+    return "";
+  }
+}
+function drawNet() {
+  const c = $("#net"); if (!c.clientWidth) return;
+  const d = window.devicePixelRatio || 1, w = c.width = c.clientWidth * d, h = c.height = c.clientHeight * d, x = c.getContext("2d");
+  x.strokeStyle = "rgba(24,184,255,.2)"; x.lineWidth = d; x.beginPath(); x.moveTo(0, h - d); x.lineTo(w, h - d); x.stroke();
+  const vals = pings.filter(v => v !== null); const mx = Math.max(60, ...vals);
+  x.strokeStyle = "#7fdcff"; x.lineWidth = 1.6 * d; x.beginPath(); let started = false;
+  pings.forEach((v, i) => {
+    const px = i * w / 39, py = v === null ? h - d : h - 4 * d - (v / mx) * (h - 8 * d);
+    started ? x.lineTo(px, py) : x.moveTo(px, py); started = true;
+  });
+  x.stroke();
+}
+async function pingEsp() {
+  const base = espBase(); const dot = $("#espDot");
+  if (!base) { espOnline = false; dot.className = "dot"; $("#espTxt").textContent = "sin IP"; return false; }
+  const t0 = performance.now();
+  try {
+    await withTimeout(base + "/", { mode: "no-cors" }, 3000);
+    espOnline = true; dot.className = "dot on"; $("#espTxt").textContent = "conectado"; pings.push(Math.round(performance.now() - t0));
+  } catch (e) { espOnline = false; dot.className = "dot off"; $("#espTxt").textContent = "sin respuesta"; pings.push(null); }
+  if (pings.length > 40) pings.shift(); drawNet(); return espOnline;
+}
+setInterval(pingEsp, 5000);
+
+/* ---------- clima, batería y red (datos reales para los paneles) ---------- */
+let wx = "";
+const WMO = c => c === 0 ? "Despejado" : c <= 2 ? "Parcialmente nublado" : c === 3 ? "Nublado" : c <= 48 ? "Niebla" : c <= 57 ? "Llovizna" : c <= 67 ? "Lluvia" : c <= 77 ? "Nieve" : c <= 82 ? "Chubascos" : "Tormenta";
+async function loadWeather() {
+  if (!cfg.loc) return;
+  try {
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${cfg.loc.lat}&longitude=${cfg.loc.lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto`);
+    const d = await r.json(), c = d.current;
+    $("#wTemp").textContent = Math.round(c.temperature_2m) + "°C"; $("#wDesc").textContent = WMO(c.weather_code);
+    $("#wFeel").textContent = "Sensación " + Math.round(c.apparent_temperature) + "°";
+    $("#wWind").textContent = "Viento " + Math.round(c.wind_speed_10m) + " km/h";
+    $("#wHum").textContent = "Humedad " + c.relative_humidity_2m + " %";
+    $("#wMM").textContent = "Máx " + Math.round(d.daily.temperature_2m_max[0]) + "° · Mín " + Math.round(d.daily.temperature_2m_min[0]) + "°";
+    wx = ["#wTemp", "#wDesc", "#wFeel", "#wWind", "#wHum", "#wMM"].map(k => $(k).textContent).join(", ");
+  } catch (e) { $("#wDesc").textContent = "Sin datos del clima"; }
+}
+function locate() {
+  if (cfg.loc || !navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(p => {
+    cfg.loc = { lat: +p.coords.latitude.toFixed(3), lon: +p.coords.longitude.toFixed(3) }; save(); loadWeather();
+  }, () => { $("#wDesc").textContent = "Activá la ubicación"; }, { timeout: 8000 });
+}
+function netInfo() {
+  const c = navigator.connection;
+  $("#bNet").textContent = navigator.onLine ? (c ? [c.effectiveType, c.downlink ? c.downlink + " Mb/s" : ""].filter(Boolean).join(" · ") : "en línea") : "sin conexión";
+}
+if (navigator.getBattery) navigator.getBattery().then(b => {
+  const u = () => { $("#bBat").textContent = Math.round(b.level * 100) + " %"; $("#bSrc").textContent = b.charging ? "Cargador" : "Batería"; };
+  u(); b.onlevelchange = u; b.onchargingchange = u;
+});
+setInterval(netInfo, 10000); setInterval(loadWeather, 900000);
+
+/* ---------- cerebro IA (Claude), con respuesta en streaming ---------- */
+let hist = [];
+const actName = c => c.nombre || (c.frases && c.frases[0]) || c.ruta;
+const trimHist = () => {
+  while (hist.length > 14) hist.shift();
+  while (hist.length && !(hist[0].role === "user" && typeof hist[0].content === "string")) hist.shift();
+};
+const sysPrompt = () =>
+  `Eres J.A.R.V.I.S., el asistente de inteligencia artificial personal de ${cfg.nombre}, instalado en su casa inteligente Domus (controlada por un ESP32). ` +
+  `Hablás en español, con tono sereno, elegante y leal, con un toque de humor seco. Llamalo siempre ${cfg.nombre}. ` +
+  `Tus respuestas se leen en voz alta: máximo dos frases cortas, sin listas, sin markdown, sin emojis. ` +
+  `Podés conversar de cualquier tema y ayudar con preguntas. El texto del usuario viene de reconocimiento de voz y puede tener errores: interpretalo con criterio. ` +
+  `Para actuar sobre la casa usá la herramienta domus_accion. Nunca digas que hiciste algo sin haberla usado, y si una acción falla, decilo con honestidad. ` +
+  `Si te piden algo que no está entre tus acciones, explicá que todavía no podés hacerlo. ` +
+  `Cuando des información concreta usá además la herramienta mostrar_info para mostrarla en pantalla (título corto y hasta 4 líneas breves), y hablá solo un resumen. Acciones disponibles:\n` +
+  cfg.cmds.map(c => "- " + actName(c) + ": " + (c.descripcion || (c.frases || []).join(" / "))).join("\n") +
+  `\nFecha y hora actual: ${new Date().toLocaleString("es-PY")}.` + (wx ? `\nClima actual: ${wx}.` : "");
+
+async function aiTurn(tools) {
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-api-key": cfg.aiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+    body: JSON.stringify({ model: cfg.aiModel || "claude-haiku-5-5", max_tokens: 300, stream: true, system: sysPrompt(), tools, messages: hist })
+  });
+  if (!r.ok) throw new Error("La IA respondió " + r.status + ": " + (await r.text()).slice(0, 140));
+  const reader = r.body.getReader(), dec = new TextDecoder(); let buf = "", pending = "", stop = null; const blocks = [];
+  const flush = final => {
+    let m;
+    while ((m = /[.!?…]+\s/.exec(pending))) { const end = m.index + m[0].length; enqueue(pending.slice(0, end)); pending = pending.slice(end); }
+    if (final && pending.trim()) { enqueue(pending); pending = ""; }
+  };
+  for (;;) {
+    const { done, value } = await reader.read(); if (done) break;
+    buf += dec.decode(value, { stream: true }); let i;
+    while ((i = buf.indexOf("\n\n")) >= 0) {
+      const ev = buf.slice(0, i); buf = buf.slice(i + 2);
+      const line = ev.split("\n").find(l => l.startsWith("data:")); if (!line) continue;
+      let d; try { d = JSON.parse(line.slice(5)); } catch (e) { continue; }
+      if (d.type === "error") throw new Error((d.error && d.error.message) || "error de la IA");
+      if (d.type === "content_block_start") {
+        const b = d.content_block;
+        blocks[d.index] = b.type === "tool_use" ? { type: "tool_use", id: b.id, name: b.name, input: {}, _j: "" } : { type: "text", text: "" };
+      } else if (d.type === "content_block_delta") {
+        const b = blocks[d.index];
+        if (d.delta.type === "text_delta") { b.text += d.delta.text; pending += d.delta.text; flush(false); }
+        else if (d.delta.type === "input_json_delta") b._j += d.delta.partial_json;
+      } else if (d.type === "content_block_stop") {
+        const b = blocks[d.index];
+        if (b.type === "tool_use") { try { b.input = JSON.parse(b._j || "{}"); } catch (e) { b.input = {}; } delete b._j; }
+        else flush(true);
+      } else if (d.type === "message_delta") stop = d.delta.stop_reason;
+    }
+  }
+  flush(true);
+  return { blocks: blocks.filter(Boolean).filter(b => b.type !== "text" || b.text.trim()), stop };
+}
+async function runAI(raw) {
+  aiBusy = true;
+  const names = cfg.cmds.map(actName);
+  const tools = [{
+    name: "mostrar_info", description: "Muestra información en pantalla como paneles con hilos que salen del núcleo. Usala siempre que des datos concretos (estado de la casa, clima, cifras, listas).",
+    input_schema: { type: "object", properties: { titulo: { type: "string" }, lineas: { type: "array", items: { type: "string" }, maxItems: 5 } }, required: ["titulo", "lineas"] }
+  }];
+  if (names.length) tools.push({
+    name: "domus_accion", description: "Ejecuta una acción en Domus, la casa inteligente de " + cfg.nombre + ".",
+    input_schema: { type: "object", properties: { accion: { type: "string", enum: names } }, required: ["accion"] }
+  });
+  trimHist(); const base = hist.length; hist.push({ role: "user", content: raw });
+  try {
+    for (let i = 0; i < 4; i++) {
+      const { blocks } = await aiTurn(tools);
+      if (!blocks.length) { hist.length = base; await say("No supe qué responder, {nombre}."); break; }
+      hist.push({ role: "assistant", content: blocks });
+      const uses = blocks.filter(b => b.type === "tool_use");
+      if (!uses.length) break;
+      const results = [];
+      for (const u of uses) {
+        let out, err = false;
+        if (u.name === "mostrar_info") { showInfo(u.input.titulo || "INFORMACIÓN", u.input.lineas, 14000); out = "Mostrado en pantalla"; }
+        else {
+          const c = cfg.cmds.find(c => actName(c) === u.input.accion);
+          if (!c) { out = "Acción desconocida"; err = true; }
+          else try {
+            out = (await callEsp(c.ruta, c.metodo || "GET")) || "Orden enviada correctamente"; $("#lastEsp").textContent = out;
+            showInfo("DOMUS", [c.descripcion || actName(c), out], 10000);
+          } catch (e) { out = "Error: " + e.message; err = true; $("#lastEsp").textContent = "sin respuesta"; }
+        }
+        results.push({ type: "tool_result", tool_use_id: u.id, content: out, ...(err ? { is_error: true } : {}) });
+      }
+      hist.push({ role: "user", content: results });
+    }
+    await drain();
+  } catch (e) {
+    hist.length = base; log("error", e.message);
+    await say("Tuve un problema para pensar eso, {nombre}.");
+  } finally { aiBusy = false; }
+}
+async function runCommand(raw) {
+  if (!cfg.aiKey || aiOff) return runSimple(raw);
+  setState("thinking");
+  await runAI(raw);
+  awakeUntil = Date.now() + 7000;                       // podés seguir hablando sin repetir "Jarvis"
+  if (active && !speaking) setState("listening");
+  setTimeout(() => { if (!speaking && Date.now() >= awakeUntil && !forceNext && state === "listening") setState("idle"); }, 7100);
+}
+
+/* ---------- modo simple (sin clave de IA) ---------- */
+async function runSimple(raw) {
+  setState("thinking");
+  const n = norm(raw);
+  let best = null, bestLen = 0;
+  for (const c of cfg.cmds) for (const p of c.frases || []) {
+    const pn = norm(p); if (pn && n.includes(pn) && pn.length > bestLen) { best = c; bestLen = pn.length; }
+  }
+  if (best) {
+    try {
+      const r = await callEsp(best.ruta, best.metodo || "GET");
+      $("#lastEsp").textContent = r || "orden enviada";
+      showInfo("DOMUS", [best.descripcion || actName(best), r || "orden enviada"], 10000);
+      return say((best.respuesta || "Hecho, {nombre}.").replaceAll("{r}", r || "sin datos"));
+    } catch (e) {
+      $("#lastEsp").textContent = "sin respuesta";
+      log("error", e.message);
+      return say("No pude comunicarme con Domus, {nombre}.");
+    }
+  }
+  if (/\b(hora|que hora)\b/.test(n)) { const h = new Date().toLocaleTimeString("es-PY", { hour: "2-digit", minute: "2-digit" }); showInfo("HORA", [h], 8000); return say("Son las " + h + ", {nombre}."); }
+  if (/\b(fecha|que dia)\b/.test(n)) { const f = new Date().toLocaleDateString("es-PY", { weekday: "long", day: "numeric", month: "long" }); showInfo("FECHA", [f], 8000); return say("Hoy es " + f + "."); }
+  if (/\b(hola|buenas|buen dia|buenos dias|buenas tardes|buenas noches)\b/.test(n)) return say("A tus órdenes, {nombre}.");
+  if (/\b(gracias)\b/.test(n)) return say("Para eso estoy, {nombre}.");
+  return say("No tengo ese comando. Para conversar de verdad necesito la clave de IA en Ajustes, {nombre}.");
+}
+function onFinal(text) {
+  if (speaking) return;
+  const n = norm(text); const m = n.match(WAKE); let cmd = null;
+  if (m) {
+    cmd = n.slice(m.index + m[0].length).trim();
+    if (!cmd) { awakeUntil = Date.now() + 8000; setState("listening"); return say("Dime, {nombre}."); }
+  } else if (forceNext || Date.now() < awakeUntil) cmd = n;
+  else return;
+  forceNext = false; awakeUntil = 0;
+  const orig = (m ? text.replace(new RegExp(WAKE.source, "i"), "") : text).replace(/^[\s,.:¡!¿?]+/, "").replace(/\s+/g, " ").trim();
+  log("tú", orig || cmd); showInfo("ORDEN", [orig || cmd], 5000);
+  runCommand(orig || cmd);
+}
+
+/* ---------- reconocimiento de voz (reacciona sin esperar el final de la frase) ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec, heard = "", fireTimer = null, startIdx = 0, resLen = 0, recWanted = false, tapTimer = null;
+function stopRec() { recWanted = false; clearTimeout(fireTimer); heard = ""; if (rec) { rec.onend = null; try { rec.abort(); } catch (e) {} } }
+const relevant = t => WAKE.test(norm(t)) || forceNext || Date.now() < awakeUntil;
+function fire() {
+  clearTimeout(fireTimer); fireTimer = null;
+  const text = heard; heard = ""; startIdx = resLen;      // sigue en la misma sesión: Chrome no vuelve a pedir el micrófono
+  if (!text.trim()) return;
+  onFinal(text);
+  if (cfg.modo === "tap") { clearTimeout(tapTimer); stopRec(); }   // modo privado: vuelve a apagar el micrófono
+}
+function startRec() {
+  if (!SR) { log("error", "Este navegador no tiene reconocimiento de voz. Usá Chrome."); return; }
+  if (rec) { rec.onend = null; try { rec.abort(); } catch (e) {} }
+  recWanted = true;
+  rec = new SR(); rec.lang = cfg.lang; rec.continuous = true; rec.interimResults = true;
+  rec.onstart = () => { startIdx = 0; resLen = 0; };
+  rec.onresult = e => {
+    resLen = e.results.length;
+    if (micMuted) { startIdx = resLen; heard = ""; return; }
+    if (speaking || Date.now() < ignoreUntil) { startIdx = resLen; heard = ""; return; }   // descarta lo que oye mientras habla
+    let text = "", fin = false;
+    for (let i = startIdx; i < e.results.length; i++) { text += e.results[i][0].transcript + " "; fin = e.results[i].isFinal; }
+    heard = text.trim(); if (!heard) return;
+    clearTimeout(fireTimer);
+    if (!relevant(heard)) { if (fin) { heard = ""; startIdx = resLen; } return; }   // lo que no es para Jarvis ni se muestra ni se guarda
+    $("#heard").textContent = heard;
+    if (fin) fire(); else fireTimer = setTimeout(fire, 650);
+  };
+  rec.onend = () => { if (active && recWanted) setTimeout(() => { try { rec.start(); } catch (e) {} }, 200); };
+  rec.onerror = e => {
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") { active = false; recWanted = false; setState("off"); micHelp(); }
+  };
+  try { rec.start(); } catch (e) {}
+}
+function micHelp() {
+  log("error", location.protocol === "file:"
+    ? "Chrome bloqueó el micrófono. Tocá el ícono del micrófono tachado en la barra de direcciones, elegí Permitir, recargá con F5 y tocá ACTIVAR."
+    : "Chrome bloqueó el micrófono. Tocá el candado junto a la dirección y permitilo; en ChromeOS revisá que el micrófono no esté apagado en Ajustes > Privacidad y seguridad.");
+}
+async function activate() {
+  if (active) return;
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});   // oculta las barras del navegador y del sistema
+  active = true; ensureAudio(); ac.resume(); setState("idle"); if (cfg.modo !== "tap") startRec(); refreshStatus(); pingEsp(); locate();
+  if (cfg.modo === "tap") log("jarvis", "Modo privado: solo escucho cuando tocás el núcleo o apretás espacio.");
+  if (cfg.key && cfg.voice) fetchAudio("Dime, " + cfg.nombre).catch(() => {});   // lista para responder al instante
+  say(cfg.aiKey ? "Sistemas en línea. Buenas, {nombre}."
+    : "Sistemas en línea, {nombre}. Pero todavía no tengo mi cerebro de IA: cargá la clave en Ajustes.");
+}
+function listenNow() {
+  if (!active) return activate();
+  if (speaking) return;
+  forceNext = true; setState("listening"); $("#heard").textContent = "Te escucho…";
+  if (!recWanted) {                                        // modo privado: enciende el micrófono solo ahora
+    startRec(); clearTimeout(tapTimer);
+    tapTimer = setTimeout(() => { if (cfg.modo === "tap" && !speaking && !aiBusy) { forceNext = false; stopRec(); setState("idle"); } }, 9000);
+  }
+}
+$("#start").onclick = activate;
+$("#hud").onclick = e => hudClick(e);
+const toggleFull = () => { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {}); };
+$("#btnFull").onclick = toggleFull;
+addEventListener("keydown", e => {
+  if ($("#dlg").open || e.target !== document.body) return;
+  if (e.code === "Space") { e.preventDefault(); listenNow(); }
+  if (e.key === "f" || e.key === "F") toggleFull();
+  if (e.key === "m" || e.key === "M") toggleMode();
+});
+
+/* ---------- ajustes ---------- */
+function fillForm() {
+  $("#fNombre").value = cfg.nombre; $("#fKey").value = cfg.key; $("#fVoice").value = cfg.voice;
+  $("#fAiKey").value = cfg.aiKey; $("#fAiModel").value = cfg.aiModel;
+  $("#fModel").value = cfg.model; $("#fStab").value = cfg.stab; $("#fSpeed").value = cfg.speed; $("#fEsp").value = cfg.esp;
+  $("#fCmds").value = JSON.stringify(cfg.cmds, null, 2);
+}
+function readForm() {
+  let cmds; try { cmds = JSON.parse($("#fCmds").value); if (!Array.isArray(cmds)) throw 0; }
+  catch (e) { log("error", "El JSON de comandos tiene un error. No se guardó."); return false; }
+  Object.assign(cfg, { nombre: $("#fNombre").value.trim() || "Mauri", key: $("#fKey").value.trim(), voice: $("#fVoice").value.trim(),
+    model: $("#fModel").value.trim() || "eleven_flash_v2_5",
+    aiKey: $("#fAiKey").value.trim(), aiModel: $("#fAiModel").value.trim() || "claude-haiku-5-5",
+    stab: Math.min(1, Math.max(0, parseFloat($("#fStab").value) || 0.6)),
+    speed: Math.min(1.2, Math.max(0.7, parseFloat($("#fSpeed").value) || 1)), esp: $("#fEsp").value.trim(), cmds });
+  hist = []; errShown = false; save(); refreshStatus(); renderCmds(); pingEsp(); return true;
+}
+$("#btnCfg").onclick = () => { fillForm(); $("#dlg").showModal(); };
+$("#bClose").onclick = () => $("#dlg").close();
+$("#bSave").onclick = () => { if (readForm()) $("#dlg").close(); };
+$("#bVoice").onclick = () => { if (readForm()) say("Prueba de voz. Hola, {nombre}."); };
+$("#bEsp").onclick = async () => { if (readForm()) log("jarvis", (await pingEsp()) ? "Domus responde." : "Domus no responde."); };
+
+/* ---------- HUD animado (vectorial: nítido en 4K) ---------- */
+const callouts = [];
+const cv = $("#hud"), g = cv.getContext("2d"), TAU = Math.PI * 2;
+const sc = () => Math.min(W / 1920, H / 1080);
+const ctr = () => { const k = sc(); return { cx: (W - 1920 * k) / 2 + 968 * k, cy: (H - 1080 * k) / 2 + 548 * k, R: 474 * k }; };
+let W = 0, H = 0;
+function resize() {
+  const d = Math.min(window.devicePixelRatio || 1, 3);
+  W = innerWidth; H = innerHeight;
+  cv.width = Math.round(W * d); cv.height = Math.round(H * d);
+  g.setTransform(d, 0, 0, d, 0, 0); drawNet(); callouts.forEach(closeCallout);
+}
+addEventListener("resize", resize); resize();
+
+/* ---------- paneles con hilos que salen del núcleo ---------- */
+const SLOTS = [{ a: Math.PI + 0.55, side: "L" }, { a: -0.55, side: "R" }, { a: Math.PI - 0.55, side: "L" }, { a: 0.55, side: "R" }];
+function closeCallout(c) {
+  if (!c || c.closing) return;
+  c.closing = true; c.tClose = performance.now(); c.el.classList.remove("show"); clearTimeout(c.timer);
+  document.body.classList.toggle("has-callouts", callouts.some(x => !x.closing));
+}
+function showInfo(title, lines, ttl = 12000) {
+  lines = (Array.isArray(lines) ? lines : [lines]).filter(Boolean).map(String).slice(0, 5);
+  if (!lines.length) return;
+  if (String(title).toUpperCase() === "DOMUS") { lastAct = String(lines[0]); actUse[lastAct] = (actUse[lastAct] || 0) + 1; }
+  const live = callouts.filter(c => !c.closing);
+  let slot = [0, 1, 2, 3].find(s => !live.some(c => c.slot === s));
+  if (slot === undefined) { const old = live.sort((a, b) => a.t0 - b.t0)[0]; closeCallout(old); slot = old.slot; }
+  const el = document.createElement("div"); el.className = "callout";
+  const h = document.createElement("h4"); h.textContent = String(title || "INFORMACIÓN").toUpperCase(); el.append(h);
+  lines.forEach((t, i) => { const d = document.createElement("div"); d.className = "l"; d.style.animationDelay = (0.12 * i) + "s"; d.textContent = t; el.append(d); });
+  $(".ui").append(el);
+  const { cx, cy, R } = ctr(), S = SLOTS[slot];
+  const p1x = cx + Math.cos(S.a) * 1.14 * R, p1y = cy + Math.sin(S.a) * 1.14 * R, w = el.offsetWidth, hh = el.offsetHeight;
+  let left = S.side === "L" ? p1x - 0.04 * R - w : p1x + 0.04 * R;
+  left = Math.max(8, Math.min(W - w - 8, left));
+  const top = Math.max(H * 0.07, Math.min(H - hh - H * 0.08, p1y - hh / 2));
+  el.style.left = left + "px"; el.style.top = top + "px";
+  const c = { slot, el, a: S.a, edgeX: S.side === "L" ? left + w : left, cy: top + hh / 2, t0: performance.now(), closing: false, tClose: 0, shown: false };
+  c.timer = setTimeout(() => closeCallout(c), ttl);
+  callouts.push(c); document.body.classList.add("has-callouts");
+}
+function drawCallouts(now, R) {
+  const { cx, cy } = ctr(), u = R / 420, light = cur.map(v => v + (255 - v) * 0.6);
+  for (let i = callouts.length - 1; i >= 0; i--) {
+    const c = callouts[i]; let p;
+    if (c.closing) { p = 1 - Math.min(1, (now - c.tClose) / 450); if (p <= 0) { c.el.remove(); callouts.splice(i, 1); continue; } }
+    else { p = Math.min(1, (now - c.t0) / 750); if (p >= 1 && !c.shown) { c.shown = true; c.el.classList.add("show"); } }
+    const e = p * p * (3 - 2 * p);
+    const p1y = cy + Math.sin(c.a) * 1.14 * R;
+    const pts = [[cx + Math.cos(c.a) * R, cy + Math.sin(c.a) * R], [cx + Math.cos(c.a) * 1.14 * R, p1y], [c.edgeX, p1y], [c.edgeX, c.cy]];
+    const segs = [0, 1, 2].map(k => Math.hypot(pts[k + 1][0] - pts[k][0], pts[k + 1][1] - pts[k][1]));
+    let rem = e * (segs[0] + segs[1] + segs[2]), end = pts[0];
+    g.save(); g.lineWidth = 1.6 * u; g.strokeStyle = rgba(cur, 0.95); g.shadowColor = rgba(cur, 1); g.shadowBlur = 8 * u;
+    g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
+    for (let k = 0; k < 3 && rem > 0; k++) {
+      const f = Math.min(1, rem / (segs[k] || 1));
+      end = [pts[k][0] + (pts[k + 1][0] - pts[k][0]) * f, pts[k][1] + (pts[k + 1][1] - pts[k][1]) * f];
+      g.lineTo(end[0], end[1]); rem -= segs[k];
+    }
+    g.stroke(); g.shadowBlur = 0;
+    g.fillStyle = rgba(cur, 1); g.beginPath(); g.arc(pts[0][0], pts[0][1], 3.5 * u, 0, TAU); g.fill();
+    g.fillStyle = rgba(light, 1); g.beginPath(); g.arc(end[0], end[1], 3 * u, 0, TAU); g.fill();
+    g.restore();
+  }
+}
+
+/* ---------- escena HUD (copia del diseño de referencia, 1920x1080 escalado: nítido en 4K) ---------- */
+const COL = { off: [110, 130, 140], idle: [24, 184, 255], listening: [120, 232, 255], thinking: [255, 176, 74], speaking: [50, 205, 255] };
+const MODS = Array(24).fill("");
+Object.entries({ 0: "IA", 1: "VOZ", 2: "DOM", 3: "ESP", 4: "NET", 5: "CFG", 17: "SYS", 18: "HORA", 19: "CLIMA", 20: "LOG", 21: "ÓRD", 22: "PANT", 23: "MIC" }).forEach(([k, v]) => MODS[k] = v);
+const modAng = k => -Math.PI / 2 + 0.1309 + k * TAU / 24;
+const cur = [...COL.off], bars = new Float32Array(48), TEAL = [45, 224, 184], WHT = [225, 240, 245];
+let ph = 0, spCur = 0.3, curAmp = 0, last = performance.now(), lastAct = "", actUse = {}, GA = 1;
+const rgba = (c, a) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a * GA})`;
+const pad2 = n => String(n).padStart(2, "0");
+const txt = id => ($(id) || {}).textContent || "";
+const wrapTxt = (t, n) => { const out = []; let l = ""; for (const w of String(t).split(/\s+/)) { if ((l + " " + w).trim().length > n) { out.push(l); l = w; } else l = (l + " " + w).trim(); } if (l) out.push(l); return out; };
+const isLit = l => ({ IA: !!cfg.aiKey && !aiOff, VOZ: !voiceMuted, DOM: espOnline, ESP: espOnline, NET: navigator.onLine, SYS: active, MIC: active && recWanted, LOG: true, HORA: true }[l]);
+
+function toggleMode() {
+  cfg.modo = cfg.modo === "tap" ? "wake" : "tap"; save();
+  if (!active) return log("jarvis", cfg.modo === "tap" ? "Modo privado activado." : "Modo siempre atento activado.");
+  if (cfg.modo === "tap") { stopRec(); forceNext = false; setState("idle"); log("jarvis", "Modo privado: solo escucho cuando tocás el núcleo o apretás espacio."); }
+  else { startRec(); log("jarvis", "Modo siempre atento: respondo cuando digas Jarvis."); }
+}
+function hudClick(e) {
+  const s = sc(), x = (e.clientX - (W - 1920 * s) / 2) / s - 968, y = (e.clientY - (H - 1080 * s) / 2) / s - 548, r = Math.hypot(x, y);
+  if (r > 282 && r < 338) {
+    const k = ((Math.round((Math.atan2(y, x) - modAng(0)) / (TAU / 24)) % 24) + 24) % 24, m = MODS[k];
+    if (m === "MIC") return toggleMode();
+    if (m === "VOZ") { voiceMuted = !voiceMuted; return; }
+    if (m === "IA") { aiOff = !aiOff; return; }
+    if (m === "PANT") return toggleFull();
+    if (m === "CFG") return $("#btnCfg").click();
+  }
+  listenNow();
+}
+
+function scene(now) {
+  const light = cur.map(v => v + (255 - v) * 0.6), dimA = document.body.classList.contains("has-callouts") ? 0.14 : 1;
+  const T = (t, x, y, sz, c = WHT, a = 1, al = "left", w = 500) => {
+    g.font = `${w} ${sz}px Rajdhani, system-ui, sans-serif`; g.fillStyle = rgba(c, a); g.textAlign = al; g.textBaseline = "middle"; g.fillText(t, x, y);
+  };
+  const L = (x0, y0, x1, y1, c = WHT, a = 0.3, lw = 1) => { g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.lineWidth = lw; g.strokeStyle = rgba(c, a); g.stroke(); };
+  const stat = (x, lab, val) => { T(val, x, 24, 19, WHT, 0.95, "center", 500); T(lab, x, 43, 11, cur, 0.8, "center"); };
+
+  // barra superior
+  L(0, 60, 1920, 60, cur, 0.25); L(916, 60, 922, 52, WHT, 0.6);
+  stat(110, "DOMUS", txt("#espTxt")); stat(300, "VOZ", txt("#sVoz")); stat(490, "CEREBRO", cfg.aiKey && !aiOff ? "IA Claude" : "comandos");
+  stat(740, "LAN", (cfg.esp || "sin IP").replace(/^https?:\/\//, ""));
+  T(txt("#date"), 1060, 14, 13, WHT, 0.9, "center"); T(txt("#clock"), 1060, 34, 21, WHT, 1, "center");
+  stat(1230, "RED", txt("#bNet")); stat(1380, "NÚCLEOS", String(navigator.hardwareConcurrency || "—")); stat(1500, "RAM", navigator.deviceMemory ? navigator.deviceMemory + " G" : "—");
+  stat(1620, "BAT", txt("#bBat")); T(cfg.nombre, 1900, 14, 15, WHT, 0.9, "right", 600); T("J.A.R.V.I.S.", 1900, 36, 13, cur, 0.9, "right", 700);
+
+  // columna izquierda
+  const ms = pings.length ? pings[pings.length - 1] : null;
+  T("◉", 27, 98, 26, WHT, 0.8, "center"); T((ms === null ? "—" : ms + " ms") + " :: Latencia", 120, 102, 17); T("Domus :: " + txt("#espTxt"), 311, 102, 17);
+  T("✎", 17, 211, 24, WHT, 0.8, "center"); T("Órdenes", 64, 211, 17, WHT, 0.95); L(40, 224, 165, 224, WHT, 0.25);
+  cfg.cmds.slice(0, 8).forEach((c, i) => T("- " + (c.descripcion || actName(c)), 5, 271 + 20 * i, 16, WHT, 0.85));
+  T("Mensajes :: " + $("#log").children.length, 3, 941, 18); T("Voz :: " + (voiceMuted ? "silenciada" : txt("#sVoz")), 207, 941, 18);
+  T("Fuente :: " + txt("#bSrc"), 3, 999, 18); T("Energía :: " + txt("#bBat"), 226, 999, 18);
+  g.strokeStyle = rgba(WHT, 0.4); g.strokeRect(425, 975, 50, 40);
+
+  // lista de acciones junto al anillo (la última usada se marca con el hilo)
+  GA = dimA;
+  const acts = cfg.cmds.slice(0, 14).map(c => (c.descripcion || actName(c))), y0 = 548 - acts.length * 7;
+  acts.forEach((a, i) => {
+    const on = a === lastAct, y = y0 + i * 14.5;
+    T(a.toUpperCase(), 497, y, on ? 15 : 11, on ? cur : WHT, on ? 1 : 0.8, "right", 600);
+    if (actUse[a]) T(String(actUse[a]) + "x", 520, y, 11, WHT, 0.7);
+    if (on) L(499, y, 545, y, WHT, 0.9, 2);
+  });
+  // clima
+  T("Clima", 1420, 290, 14, TEAL); T("Actualizado " + txt("#clock").slice(0, 5), 1420, 306, 11, WHT, 0.55);
+  T(txt("#wTemp"), 1420, 338, 36, WHT, 1, "left", 600); T(txt("#wDesc"), 1420, 382, 21, WHT, 1);
+  ["#wFeel", "#wWind", "#wHum", "#wMM"].forEach((id, i) => T(txt(id), 1430, 407 + 17 * i, 12.5, WHT, 0.8));
+  GA = 1;
+
+  // columna derecha
+  L(1650, 70, 1650, 1020, WHT, 0.12); L(1655, 330, 1910, 330, WHT, 0.12); L(1655, 700, 1910, 700, WHT, 0.12);
+  T("▣  MENSAJES", 1658, 98, 18, WHT, 0.95, "left", 600);
+  [...document.querySelectorAll("#log .msg")].slice(-8).forEach((m, i) => { const t = m.textContent; T(t.length > 32 ? t.slice(0, 31) + "…" : t, 1658, 128 + 21 * i, 12.5, WHT, 0.85); });
+  T("☑  DOMUS", 1658, 344, 18, WHT, 0.95, "left", 600);
+  wrapTxt(txt("#lastEsp"), 36).slice(0, 5).forEach((t, i) => T(t, 1658, 374 + 18 * i, 13, cur, 0.9));
+  T("ESP32", 1658, 727, 13, WHT, 0.6); T((cfg.esp || "sin IP").replace(/^https?:\/\//, ""), 1905, 727, 15, WHT, 0.95, "right");
+  T("Estado", 1658, 748, 13, WHT, 0.6); T(txt("#espTxt"), 1905, 748, 15, WHT, 0.95, "right");
+  g.beginPath(); g.moveTo(1660, 825); const vals = pings.filter(v => v !== null), mx = Math.max(60, ...vals);
+  pings.forEach((v, i) => g.lineTo(1660 + i * 245 / 39, v === null ? 825 : 822 - (v / mx) * 32)); g.lineTo(1660 + (pings.length - 1) * 245 / 39, 825); g.closePath();
+  g.fillStyle = rgba(cur, 0.55); g.fill(); L(1660, 826, 1905, 826, WHT, 0.4);
+  T((ms === null ? "—" : ms + " ms"), 1660, 848, 16, WHT, 0.95); T("latencia ESP32", 1905, 848, 12, WHT, 0.6, "right");
+  g.letterSpacing = "5px"; T("Reproduciendo", 1905, 921, 14, WHT, 0.8, "right"); g.letterSpacing = "0px";
+  g.strokeStyle = rgba(WHT, 0.7); g.lineWidth = 2; g.strokeRect(1660, 935, 62, 62); T("♪", 1691, 967, 42, WHT, 0.95, "center");
+  wrapTxt(txt("#nowTxt"), 26).slice(0, 3).forEach((t, i) => T(t, 1738, 948 + 17 * i, 13, WHT, 0.85));
+  const hd = txt("#heard"); T(txt("#status"), 960, 1040, 14, cur, 1, "center", 700); T(hd.length > 80 ? hd.slice(0, 79) + "…" : hd, 960, 1062, 12, WHT, 0.55, "center");
+
+  // núcleo
+  g.save(); g.translate(968, 548);
+  const arc = (r, a0, a1, lw, al, c = cur) => { g.beginPath(); g.arc(0, 0, r, a0, a1); g.lineWidth = lw; g.strokeStyle = rgba(c, al); g.stroke(); };
+  const tk = (r, n, len, lw, al, rot, c = WHT) => { g.lineWidth = lw; g.strokeStyle = rgba(c, al); g.beginPath(); for (let i = 0; i < n; i++) { const a = rot + i * TAU / n; g.moveTo(Math.cos(a) * r, Math.sin(a) * r); g.lineTo(Math.cos(a) * (r - len), Math.sin(a) * (r - len)); } g.stroke(); };
+  [[0.35, 2.9], [3.3, 5.0], [5.25, 6.1]].forEach(([a, b]) => arc(474, a, b, 1.4, 0.4, WHT)); arc(474, -2.55, -2.4, 9, 0.75, WHT);
+  tk(466, 72, 14, 1.4, 0.35, ph * 0.02); tk(446, 24, 8, 2, 0.4, -ph * 0.03);
+  arc(372, 0, TAU, 1.2, 0.35, WHT); arc(362, 0, TAU, 1.2, 0.35, WHT);
+  arc(366, Math.PI - 0.15, Math.PI + 0.12, 5, 0.85, WHT); arc(366, -0.12, 0.04, 5, 0.85, WHT); arc(366, 0.1, 0.3, 5, 0.95, cur);
+  for (let k = 0; k < 24; k++) {                                   // módulos
+    const a = modAng(k), h = 0.118, lab = MODS[k], on = lab && isLit(lab);
+    g.beginPath(); g.arc(0, 0, 338, a - h, a + h); g.arc(0, 0, 282, a + h, a - h, true); g.closePath();
+    g.fillStyle = rgba(cur, on ? 0.3 : 0.07); g.fill(); g.lineWidth = 1.2; g.strokeStyle = rgba(WHT, 0.45); g.stroke();
+    if (lab) { g.save(); g.rotate(a + (Math.sin(a) < 0 ? Math.PI / 2 : -Math.PI / 2)); T(lab, 0, Math.sin(a) < 0 ? -310 : 310, 15, on ? light : WHT, on ? 1 : 0.7, "center", 600); g.restore(); }
+  }
+  g.shadowColor = rgba(cur, 1); g.shadowBlur = 26 + curAmp * 30; arc(240, 0, TAU, 28, 0.95); g.shadowBlur = 0;   // anillo azul brillante
+  arc(255, 0, TAU, 2, 0.9, light); arc(224, 0, TAU, 2, 0.9, light); tk(222, 150, 9, 1.4, 0.8, ph * 0.1);
+  g.fillStyle = rgba(WHT, 0.93);                                    // aspas blancas
+  for (let i = 0; i < 38; i++) {
+    const a = ph * 0.25 + i * TAU / 38, p = (r, d) => [Math.cos(a + d) * r, Math.sin(a + d) * r];
+    g.beginPath(); g.moveTo(...p(192, 0)); g.lineTo(...p(218, 0.075)); g.lineTo(...p(218, 0.14)); g.lineTo(...p(192, 0.065)); g.closePath(); g.fill();
+  }
+  const gr = g.createRadialGradient(0, 0, 0, 0, 0, 190); gr.addColorStop(0, "rgba(2,6,9,.9)"); gr.addColorStop(1, rgba(cur, 0.1));
+  g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 190, 0, TAU); g.fill();
+  g.fillStyle = rgba(cur, 0.6); for (let i = 0; i < 28; i++) { const a = i * TAU / 28 + ph * 0.03; g.beginPath(); g.arc(Math.cos(a) * 150, Math.sin(a) * 150, 1.6, 0, TAU); g.fill(); }
+  [[-0.9, "0%"], [-2.3, "100%"], [0.9, "50%"], [2.3, "0%"]].forEach(([a, t]) => T(t, Math.cos(a) * 125, Math.sin(a) * 125, 10, WHT, 0.5, "center"));
+  const sec = new Date().getSeconds() + new Date().getMilliseconds() / 1000;
+  arc(48, 0, TAU, 1.5, 0.6, WHT); arc(48, -Math.PI / 2, -Math.PI / 2 + sec / 60 * TAU, 5, 0.95, cur);
+  T(pad2(new Date().getHours()), 0, 0, 40, WHT, 1, "center", 600); T(STATUS[state], 0, 82, 12, cur, 1, "center", 700);
+  g.lineCap = "round"; g.lineWidth = 2.4; g.strokeStyle = rgba(light, 0.9); g.beginPath();
+  for (let i = 0; i < bars.length; i++) {                           // la voz de Jarvis mueve las barras
+    let t; if (meterOn && freq) t = freq[2 + i * 2] / 255; else if (speaking) t = curAmp * (0.4 + 0.6 * Math.abs(Math.sin(i * 0.7 + now / 110))); else t = 0.02;
+    bars[i] += (t - bars[i]) * 0.35; const a = i * TAU / bars.length - Math.PI / 2;
+    g.moveTo(Math.cos(a) * 62, Math.sin(a) * 62); g.lineTo(Math.cos(a) * (64 + 34 * bars[i]), Math.sin(a) * (64 + 34 * bars[i]));
+  }
+  g.stroke(); g.lineCap = "butt";
+  const hh = new Date(); T(pad2(hh.getHours()) + ":" + pad2(hh.getMinutes()), 0, -262, 12, WHT, 0.9, "center"); T(hh.getDate() + " " + hh.toLocaleDateString("es-PY", { month: "short" }).toUpperCase(), 0, 258, 12, WHT, 0.9, "center");
+  const pulse = state === "listening" ? 0.5 + 0.5 * Math.sin(now / 150) : 0.8;                 // nodos de arriba (mic) y abajo (voz)
+  g.lineWidth = 2; g.strokeStyle = rgba(TEAL, pulse); g.beginPath(); g.arc(0, -425, 24, 0, TAU); g.stroke();
+  g.strokeStyle = rgba(TEAL, speaking ? 1 : 0.5); g.beginPath(); g.arc(0, 424, 24, 0, TAU); g.stroke();
+  [[-394, -147, "D", espOnline, ms === null ? "—" : ms + " ms"], [-394, 155, "IA", !!cfg.aiKey && !aiOff, cfg.aiKey ? "Claude" : "sin clave"],
+   [400, -147, "M", active && recWanted, cfg.modo === "tap" ? (recWanted ? "escuchando" : "al tocar") : "con Jarvis"], [400, 155, "V", !voiceMuted, voiceMuted ? "mudo" : "activa"]].forEach(([x, y, l, ok, v]) => {
+    const c = ok ? TEAL : [255, 107, 107]; g.beginPath(); g.arc(x, y, 27, 0, TAU); g.fillStyle = "rgba(3,10,14,.9)"; g.fill();
+    g.lineWidth = 2; g.strokeStyle = rgba(c, 0.95); g.stroke(); T(l, x, y + 1, 19, WHT, 1, "center", 600); T(v, x, y + 44, 11, WHT, 0.6, "center");
+  });
+  g.restore();
+}
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const tgt = COL[state] || COL.idle; for (let i = 0; i < 3; i++) cur[i] += (tgt[i] - cur[i]) * 0.08;
+  const spT = state === "thinking" ? 4 : state === "listening" ? 1.8 : state === "off" ? 0.3 : 1;
+  spCur += (spT - spCur) * 0.05; ph += dt * spCur; curAmp += (amp - curAmp) * 0.3;
+  const s = sc(); g.clearRect(0, 0, W, H); g.save(); g.translate((W - 1920 * s) / 2, (H - 1080 * s) / 2); g.scale(s, s);
+  scene(now); g.restore(); drawCallouts(now, ctr().R);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+renderCmds(); refreshStatus(); pingEsp(); netInfo(); loadWeather();
+</script>
+</body>
+</html>
