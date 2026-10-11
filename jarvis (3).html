@@ -156,7 +156,8 @@ body.has-callouts .mini,body.has-callouts .ringinfo,body.has-callouts .weather{o
 
   <input id="fAiKey" type="password" autocomplete="off">
   <p class="hint">Se crea en console.anthropic.com. Sin esta clave Jarvis NO es una IA: solo entiende las órdenes de la lista.</p>
-  <input id="fAiModel" value="claude-3-5-sonnet-latest">
+  <input id="fAiModel" value="claude-3-5-haiku-latest">
+
 
 
   <label for="fKey">Elevenlabs API key</label>
@@ -286,7 +287,8 @@ function speakBrowser(text) {
     const male = /jorge|diego|pablo|juan|carlos|enrique|miguel|male|masculin/i;
     const v = es.find(v => male.test(v.name)) || es[0]; if (v) u.voice = v;
     u.pitch = 0.5; u.rate = 0.95;
-    const iv = setInterval(() => { amp = Math.random() * .8; }, 90);
+   u.onend = () => { clearInterval(iv); amp = 0; res(); try { recognition.start(); } catch(e){} };
+
     u.onend = u.onerror = () => { clearInterval(iv); amp = 0; res(); };
     speechSynthesis.speak(u);
   });
